@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>School Management System</h1>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="add-school">Add School</button>
+            <button class="tab-btn" data-tab="list-schools">List Schools</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Add School Form -->
+            <div class="tab-pane active" id="add-school">
+                <h2>Add New School</h2>
+                <form id="school-form">
+                    <div class="form-group">
+                        <label for="name">School Name:</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address:</label>
+                        <input type="text" id="address" name="address" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="latitude">Latitude:</label>
+                        <input type="text" id="latitude" name="latitude" placeholder="e.g., 40.7128" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="longitude">Longitude:</label>
+                        <input type="text" id="longitude" name="longitude" placeholder="e.g., -74.0060" required>
+                    </div>
+
+                    <button type="submit" class="btn">Add School</button>
+                </form>
+                <div id="add-message" class="message"></div>
+            </div>
+
+            <!-- List Schools -->
+            <div class="tab-pane" id="list-schools">
+                <h2>List Schools by Proximity</h2>
+                <form id="location-form">
+                    <div class="form-group">
+                        <label for="user-latitude">Your Latitude:</label>
+                        <input type="text" id="user-latitude" name="user-latitude" placeholder="e.g., 40.7128" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-longitude">Your Longitude:</label>
+                        <input type="text" id="user-longitude" name="user-longitude" placeholder="e.g., -74.0060" required>
+                    </div>
+
+                    <button type="submit" class="btn">Find Schools</button>
+                </form>
+
+                <div class="schools-container">
+                    <h3>Schools Near You</h3>
+                    <div id="schools-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
