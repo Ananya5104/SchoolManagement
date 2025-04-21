@@ -8,6 +8,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Add a simple health check endpoint for the hosting platform
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -31,14 +36,164 @@ app.get('/api', (req, res) => {
 
 // Initialize database and start server
 async function startServer() {
-  const dbInitialized = await initializeDatabase();
+  console.log('Starting server...');
+  console.log(`Database host: ${process.env.DB_HOST}`);
+  console.log(`Database port: ${process.env.DB_PORT}`);
+  console.log(`Database name: ${process.env.DB_NAME}`);
 
-  if (dbInitialized) {
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  } else {
-    console.error('Failed to initialize database. Server not started.');
+  try {
+    const dbInitialized = await initializeDatabase();
+
+    if (dbInitialized) {
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    } else {
+      console.error('Failed to initialize database. Server not started.');
+      // Instead of exiting, let's start the in-memory version as a fallback
+      console.log('Starting in-memory version as fallback...');
+
+      // In-memory database
+      let schools = [];
+      let nextId = 1;
+
+      // Add School API
+      app.post('/addSchool', (req, res) => {
+        try {
+          const { name, address, latitude, longitude } = req.body;
+
+          // Validate input data
+          if (!name || !address || latitude === undefined || longitude === undefined) {
+            return res.status(400).json({
+              success: false,
+              message: 'All fields are required: name, address, latitude, longitude'
+            });
+          }
+
+          // Validate data types
+          if (typeof name !== 'string' || typeof address !== 'string') {
+            return res.status(400).json({
+              success: false,
+              message: 'Name and address must be strings'
+            });
+          }
+
+          // Validate latitude and longitude
+          const lat = parseFloat(latitude);
+          const lng = parseFloat(longitude);
+
+          if (isNaN(lat) || isNaN(lng)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Latitude and longitude must be valid numbers'
+            });
+          }
+
+          if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid latitude or longitude values'
+            });
+          }
+
+          // Create new school
+          const newSchool = {
+            id: nextId++,
+            name,
+            address,
+            latitude: lat,
+            longitude: lng,
+            created_at: new Date().toISOString()
+          };
+
+          // Add to in-memory database
+          schools.push(newSchool);
+
+          res.status(201).json({
+            success: true,
+            message: 'School added successfully (IN-MEMORY MODE)',
+            data: newSchool
+          });
+        } catch (error) {
+          console.error('Error adding school:', error);
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+          });
+        }
+      });
+
+      // List Schools API
+      app.get('/listSchools', (req, res) => {
+        try {
+          const { latitude, longitude } = req.query;
+
+          // Validate input data
+          if (latitude === undefined || longitude === undefined) {
+            return res.status(400).json({
+              success: false,
+              message: 'Latitude and longitude are required query parameters'
+            });
+          }
+
+          // Validate latitude and longitude
+          const userLat = parseFloat(latitude);
+          const userLng = parseFloat(longitude);
+
+          if (isNaN(userLat) || isNaN(userLng)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Latitude and longitude must be valid numbers'
+            });
+          }
+
+          if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid latitude or longitude values'
+            });
+          }
+
+          // Calculate distance for each school and add it to the school object
+          const { calculateDistance } = require('./utils/distanceCalculator');
+          const schoolsWithDistance = schools.map(school => {
+            const distance = calculateDistance(
+              userLat,
+              userLng,
+              school.latitude,
+              school.longitude
+            );
+
+            return {
+              ...school,
+              distance: parseFloat(distance.toFixed(2)) // Round to 2 decimal places
+            };
+          });
+
+          // Sort schools by distance (closest first)
+          schoolsWithDistance.sort((a, b) => a.distance - b.distance);
+
+          res.status(200).json({
+            success: true,
+            message: 'Schools retrieved successfully (IN-MEMORY MODE)',
+            data: schoolsWithDistance
+          });
+        } catch (error) {
+          console.error('Error listing schools:', error);
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+          });
+        }
+      });
+
+      app.listen(PORT, () => {
+        console.log(`Server is running in IN-MEMORY MODE on port ${PORT}`);
+        console.log('WARNING: Data will not be saved to the database!');
+      });
+    }
+  } catch (error) {
+    console.error('Error starting server:', error);
     process.exit(1);
   }
 }
